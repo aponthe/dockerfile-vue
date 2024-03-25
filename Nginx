@@ -1,0 +1,34 @@
+FROM registry.access.redhat.com/ubi9/ubi:9.3-1610
+
+RUN yum install -y yum-utils
+
+COPY nginx/nginx.repo /etc/yum.repos.d/
+
+RUN yum-config-manager --enable nginx-mainline
+
+RUN yum update -y
+
+RUN yum install -y nginx
+
+RUN yum clean all
+
+COPY vue-project/dist/. /usr/share/nginx/html
+
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
+RUN find /usr/share/nginx/html -type d -iname "*" | xargs chmod -R 755
+RUN find /usr/share/nginx/html -type f -iname "*" | xargs chmod -R 644
+
+RUN chgrp -R nginx /var/cache/nginx /var/run /var/log/nginx
+
+RUN chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
+
+COPY ./nginx/default.conf /etc/nginx/conf.d/
+
+COPY ./nginx/nginx.conf /etc/nginx/
+
+USER nginx
+
+EXPOSE 8080
+
+CMD [ "nginx", "-g", "daemon off;" ]
