@@ -1,0 +1,80 @@
+FROM registry.access.redhat.com/ubi9/ubi:9.3-1610
+
+
+#INSTALLING NODE
+
+ENV VERSION_NODE=v18.19.1
+
+ENV OS_NODE=linux
+
+ENV ARCHITECTURE_NODE=x64
+
+ENV FULL_NAME_NODE=node-${VERSION_NODE}-${OS_NODE}-${ARCHITECTURE_NODE}
+
+ENV PACKAGE_NODE=${FULL_NAME_NODE}.tar.xz
+
+ENV NODE_URL=https://nodejs.org/dist/${VERSION_NODE}/${PACKAGE_NODE}
+
+ENV WORKDIR=/opt/
+
+ENV VUE_PROJECT_PATH=${WORKDIR}/vue/app
+
+WORKDIR ${WORKDIR}
+
+#if addgroup doesnt exists you can install with following command
+RUN yum install -y shadow-utils wget tar xz openssh-server openssh-clients java-11-openjdk-devel.x86_64
+
+#CLEANING CACHE  CONTAINER
+
+RUN yum clean all
+
+RUN wget ${NODE_URL}
+
+RUN tar -xf ${PACKAGE_NODE}
+
+#SETTING USER AND GROUP nodejs
+
+RUN groupadd -r nodejs
+
+RUN useradd -r -g nodejs -m -d /home/nodejs nodejs 
+
+RUN chown -R nodejs:nodejs ${WORKDIR}/${FULL_NAME_NODE}
+
+#UPLOADING PROJECT
+
+RUN mkdir -p ${VUE_PROJECT_PATH}
+
+COPY ./vue-project/. ${VUE_PROJECT_PATH}
+
+COPY DockerfileNginx ${VUE_PROJECT_PATH}/Dockerfile
+
+RUN chown -R nodejs:nodejs ${VUE_PROJECT_PATH}
+
+RUN mkdir -p /opt/ssh/
+
+RUN echo "nodejs:nodejs" | chpasswd
+
+ENV PATH="${WORKDIR}/${FULL_NAME_NODE}/bin:$PATH"
+
+RUN echo "export PATH='${WORKDIR}/${FULL_NAME_NODE}/bin:$PATH'" >> /home/nodejs/.bashrc
+
+WORKDIR ${VUE_PROJECT_PATH}
+
+COPY ./ssh/sshd_config /opt/ssh/sshd_config
+
+RUN ssh-keygen -q -N "" -t dsa -f /opt/ssh/ssh_host_dsa_key
+RUN ssh-keygen -q -N "" -t rsa -b 4096 -f /opt/ssh/ssh_host_rsa_key
+RUN ssh-keygen -q -N "" -t ecdsa -f /opt/ssh/ssh_host_ecdsa_key
+RUN ssh-keygen -q -N "" -t ed25519 -f /opt/ssh/ssh_host_ed25519_key
+
+RUN chown -R nodejs:nodejs /opt/ssh/
+
+USER nodejs
+
+EXPOSE 2222
+
+#CMD [ "nginx", "-g", "daemon off;" ]
+CMD [ "/usr/sbin/sshd", "-D", "-E", "/opt/ssh/sshd.log", "-f", "/opt/ssh/sshd_config"]
+
+
+#CMD [ "runner.sh" ]

@@ -8,16 +8,17 @@ RUN yum-config-manager --enable nginx-mainline
 
 RUN yum update -y
 
-RUN yum install -y nginx
+RUN yum install -y nginx openssh-server java-11-openjdk-devel.x86_64
 
 RUN yum clean all
 
-COPY vue-project/dist/. /usr/share/nginx/html
+#COPY vue-project/dist/. /usr/share/nginx/html
 
 RUN chown -R nginx:nginx /usr/share/nginx/html
+RUN rm -rfv /usr/share/nginx/html/*
 
-RUN find /usr/share/nginx/html -type d -iname "*" | xargs chmod -R 755
-RUN find /usr/share/nginx/html -type f -iname "*" | xargs chmod -R 644
+#RUN find /usr/share/nginx/html -type d -iname "*" | xargs chmod -R 755
+#RUN find /usr/share/nginx/html -type f -iname "*" | xargs chmod -R 644
 
 RUN chgrp -R nginx /var/cache/nginx /var/run /var/log/nginx
 
@@ -27,8 +28,33 @@ COPY ./nginx/default.conf /etc/nginx/conf.d/
 
 COPY ./nginx/nginx.conf /etc/nginx/
 
+#COPY runner.sh /usr/local/bin/
+
+#RUN chmod +x /usr/local/bin/runner.sh
+
+RUN echo "nginx:nginx" | chpasswd
+
+#COPY ./ssh/sshd_config /opt/ssh/sshd_config
+#
+#RUN ssh-keygen -q -N "" -t dsa -f /opt/ssh/ssh_host_dsa_key
+#RUN ssh-keygen -q -N "" -t rsa -b 4096 -f /opt/ssh/ssh_host_rsa_key
+#RUN ssh-keygen -q -N "" -t ecdsa -f /opt/ssh/ssh_host_ecdsa_key
+#RUN ssh-keygen -q -N "" -t ed25519 -f /opt/ssh/ssh_host_ed25519_key
+#
+#RUN chown -R nginx:nginx /opt/ssh
+#
+#RUN usermod -aG sshd nginx
+#
+#RUN usermod -s /bin/bash nginx
+#
+#COPY ./ssh/sshd_config /etc/ssh/sshd_config
+#
+#RUN chown -R nginx:nginx /etc/ssh
+
 USER nginx
 
+#EXPOSE 8080 2222
 EXPOSE 8080
 
 CMD [ "nginx", "-g", "daemon off;" ]
+#CMD [ "/usr/sbin/sshd", "-D", "-E", "/opt/ssh/sshd.log" ]
